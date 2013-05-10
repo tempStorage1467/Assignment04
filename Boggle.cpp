@@ -42,7 +42,7 @@ const string BIG_BOGGLE_CUBES[25]  = {
     "AEEGMU", "AEGMNN", "AFIRSY", "BJKQXZ", "CCNSTW",
     "CEIILT", "CEILPT", "CEIPST", "DDLNOR", "DDHNOT",
     "DHHLOR", "DHLNOR", "EIIITT", "EMOTTT", "ENSSSU",
-   "FIPRSY", "GORRVW", "HIPRRY", "NOOTUW", "OOOTTU"
+    "FIPRSY", "GORRVW", "HIPRRY", "NOOTUW", "OOOTTU"
 };
 
 ////////// FUNCTION IMPLEMENTATION //////////
@@ -67,7 +67,9 @@ Vector<string> shuffleCubes(const string iCubes[], int numCubes) {
     return cubes;
 }
 
-void placeChars(Vector<string>& cubes, int rows, int cols) {
+// exposedCubeFaces is an output parameter
+void processChars(Vector<string>& cubes, int rows, int cols,
+                  Set<char>& exposedCubeFaces) {
     int charPlaced = 0;
     for (int row = 0; row < rows; row++) {
         for (int col = 0; col < cols; col++) {
@@ -78,6 +80,11 @@ void placeChars(Vector<string>& cubes, int rows, int cols) {
             char temp = cubes[charPlaced][cubeFace];
             cubes[charPlaced][cubeFace] = cubes[charPlaced][0];
             cubes[charPlaced][0] = temp;
+            
+            // store the exposed char into a set for use later in the program
+            exposedCubeFaces.add(temp);
+            
+            // place face-up char from cube onto board
             labelCube(row, col, temp);
             charPlaced++;
         }
@@ -224,53 +231,48 @@ string getNextHumanWord(Set<string>& enteredWords,
     return input;
 }
 
-/* Task 3: Find a given word on the board */
-void getBoardArr(char* board[][], int boardSideLen) {
-
-}
-
+/***** Task 3: Find a given word on the board *****/
 struct Coordinate {
     int colNum;
     int rowNum;
-    char letter;
 };
 
+// is word present when starting form a certain location
 bool isWordPresentFrom(const string& word, Vector<Coordinate>& outputPath,
-                       int xPos, int yPos, const int boardSideLen,
+                       int rowN, int colN, const int boardSideLen,
                        Vector<Vector<char> > board) {
     const char EXAMINED_CUBE = '0';
 
-    if (xPos < 0 || xPos >= boardSideLen || yPos < 0 || yPos >= boardSideLen) {
+    if (rowN < 0 || rowN >= boardSideLen || colN < 0 || colN >= boardSideLen) {
         // Base Case: attempting to explore a path off the board, fail ASAP
         return false;
     } else if (word.size() == 0) {
         // Base Case: path to find word exists
         return true;
-    } else if (board[xPos][yPos] != word[0]) {
+    } else if (board[rowN][colN] != word[0]) {
         // Base Case: dead end path as first char doesn't exist at this
         //   location, quit ASAP
         return false;
-    } else if (board[xPos][yPos] == EXAMINED_CUBE) {
+    } else if (board[rowN][colN] == EXAMINED_CUBE) {
         // Base Case: already explored this cube in the same tree-path of
         //   the recursive backtracking
         return false;
     }
     
-    // first char of the word to find exists at this (x, y) coordinate, so
-    //   record it
-    Coordinate path;
-    path.colNum = yPos;
-    path.rowNum = xPos;
-    path.letter = board[xPos][yPos];
-    outputPath.add(path);
-    board[xPos][yPos] = EXAMINED_CUBE;
+    // mark a char taken in this path board[] to repeat duplicate usage
+    board[rowN][colN] = EXAMINED_CUBE;
     for (int col = -1; col <= 1; col++) {
         for (int row = -1; row <= 1; row++) {
-            // mark a char taken in this path board[] to repeat duplicate usage
-            if (isWordPresentFrom(word.substr(1), outputPath, xPos + col, yPos + row,
+            if (isWordPresentFrom(word.substr(1), outputPath,
+                                  rowN + row, colN + col,
                                   boardSideLen, board)) {
-                    return true;
-                }
+                // record coordinate of successful path to find word
+                Coordinate path;
+                path.colNum = colN;
+                path.rowNum = rowN;
+                outputPath.add(path);
+                return true;
+            }
         }
     }
     return false;
@@ -283,12 +285,12 @@ bool isWordPresent(const string& word, Vector<Coordinate>& outputPath,
     int i = 0;
     Vector<Vector<char> > board;
     for (int col = 0; col < boardSideLen; col++) {
-        Vector<char> rowVec;
+        Vector<char> colVec;
         for (int row = 0; row < boardSideLen; row++) {
-            rowVec.add(cubes[i][0]);
+            colVec.add(cubes[i][0]);
             i++;
         }
-        board.add(rowVec);
+        board.add(colVec);
     }
 
     for (int col = 0; col < boardSideLen; col++) {
@@ -302,23 +304,18 @@ bool isWordPresent(const string& word, Vector<Coordinate>& outputPath,
     return false;
 }
 
-bool quickWordPresenceCheck(const string& word, const Vector<string>& cubes,
-                            const int maxWordLen) {
+bool quickWordPresenceCheck(const string& word, const int maxWordLen,
+                            const Set<char>& exposedCubeFaces) {
     if (word.size() > (maxWordLen * maxWordLen)) return false;
-
-    Set<char> exposedCubes;
-    for (int i = 0; i < cubes.size(); i++) {
-        exposedCubes.add(cubes[i][0]);
-    }
     
     for (int i = 0; i < word.size(); i++) {
-        if (!exposedCubes.contains(word[i])) return false;
+        if (!exposedCubeFaces.contains(word[i])) return false;
     }
     return true;
 }
 
 int main() {
-    /* Task 1: Cube Setup, Board Drawing, and Cube Shaking */
+    /***** Task 1: Cube Setup, Board Drawing, and Cube Shaking *****/
     
     GWindow gw(BOGGLE_WINDOW_WIDTH, BOGGLE_WINDOW_HEIGHT);
     initGBoggle(gw);
@@ -336,8 +333,8 @@ int main() {
     } else {
         bWidth = 4;
     }
-    const int BOARD_SIDE_LEN = bWidth;
-    drawBoard(BOARD_SIDE_LEN, BOARD_SIDE_LEN);
+    const int SIDE_LEN = bWidth;
+    drawBoard(SIDE_LEN, SIDE_LEN);
 
     bool forceBoardConfig = true;//askBoolQuestion("",
                                  //               "Do you want to force the board"
@@ -345,15 +342,16 @@ int main() {
 
     Vector<string> cubes;
     if (forceBoardConfig) {
-        cubes = getManualCubes(BOARD_SIDE_LEN);
+        cubes = getManualCubes(SIDE_LEN);
     } else {
         cubes = shuffleCubes(STANDARD_CUBES,
-                             BOARD_SIDE_LEN * BOARD_SIDE_LEN);
+                             SIDE_LEN * SIDE_LEN);
     }
 
-    placeChars(cubes, BOARD_SIDE_LEN, BOARD_SIDE_LEN);
+    Set<char> exposedCubeFaces;
+    processChars(cubes, SIDE_LEN, SIDE_LEN, exposedCubeFaces);
     
-    /* Task 2: Human's Turn (except for finding words on the board) */
+    /***** Task 2: Human's Turn (except for finding words on the board) *****/
     Set<string> enteredWords;
     Lexicon dict("EnglishWords.dat");
     const int MIN_WORD_LENGTH = 4;
@@ -363,32 +361,33 @@ int main() {
     cout << endl << endl;
     
     string nextWord = " ";
-    Vector<Coordinate> outputPath;
+    Vector<Coordinate> outPath;
     while (nextWord != "") {
         nextWord = getNextHumanWord(enteredWords, dict, MIN_WORD_LENGTH);
         // record that a given word has been guessed so it cannot be guessed
         //   again, regardless of whether it is valid (save duplicate work)
         enteredWords.add(nextWord);
         
-        /* Task 3: Find a given word on the board */
+        /***** Task 3: Find a given word on the board *****/
         // before doing an expensive recursive operation, check to see if
         //   all the letters of the word are present on the board; if not,
         //   quit immmediately. also check for impossibly long words
         // short-circut evaluation ensures we only incur expensive recursive
         //   computation if absolutely necessary
-        if (!quickWordPresenceCheck(nextWord, cubes, BOARD_SIDE_LEN) ||
-            !isWordPresent(nextWord, outputPath, cubes, BOARD_SIDE_LEN)) {
+        if (!quickWordPresenceCheck(nextWord, SIDE_LEN, exposedCubeFaces) ||
+            !isWordPresent(nextWord, outPath, cubes, SIDE_LEN)) {
             cout << "You can't make that word!" << endl;
             continue;
         } else {
-            cout << "Word Found!" << endl;
-            cout << "Word Path: " << outputPath.size() << endl;
-            for (int i = 0; i < outputPath.size(); i++) {
-                cout << outputPath[i].colNum << ", " << outputPath[i].rowNum << ", " << outputPath[i].letter << endl;
-                highlightCube(outputPath[i].rowNum, outputPath[i].colNum, true);
+            for (int i = 0; i < outPath.size(); i++) {
+                highlightCube(outPath[i].rowNum, outPath[i].colNum, true);
+            }
+            pause(1000);
+            for (int i = 0; i < outPath.size(); i++) {
+                highlightCube(outPath[i].rowNum, outPath[i].colNum, false);
             }
         }
-        
+        outPath.clear();
     }
 
     return 0;
