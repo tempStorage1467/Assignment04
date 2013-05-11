@@ -292,7 +292,7 @@ bool isWordPresent(const string& word, Vector<Coordinate>& outputPath,
                    const int boardSideLen) {
     for (int col = 0; col < boardSideLen; col++) {
         for (int row = 0; row < boardSideLen; row++) {
-            if (isWordPresentFrom(word, outputPath, col, row,
+            if (isWordPresentFrom(word, outputPath, row, col,
                                   boardSideLen, board)) {
                 return true;
             }
@@ -316,9 +316,7 @@ void isWordFormedFrom(string soFar, const int colN, const int rowN,
                       Set<string>& foundWords, Vector<Vector<char> > board,
                       const int boardSideLen, const int minWordLen,
                       const Lexicon& lex) {
-    if (soFar == "RA" && rowN == 2 && colN == 0) {
-        cout << "here";
-    }
+
     const char EXAMINED_CUBE = '0';
     if (rowN < 0 || rowN >= boardSideLen || colN < 0 || colN >= boardSideLen) {
         // Base Case: attempting to explore a path off the board, fail ASAP
@@ -333,14 +331,14 @@ void isWordFormedFrom(string soFar, const int colN, const int rowN,
     } else if (soFar.size() >= minWordLen && lex.contains(soFar)) {
         foundWords.add(soFar);
     }
-    
+
     // add to the explored string path
     soFar += board[rowN][colN];
     // mark a char taken in this path board[] to repeat duplicate usage
     board[rowN][colN] = EXAMINED_CUBE;
     for (int col = -1; col <= 1; col++) {
         for (int row = -1; row <= 1; row++) {
-            isWordFormedFrom(soFar, rowN + row, colN + col,
+            isWordFormedFrom(soFar, colN + col, rowN + row,
                              foundWords, board, boardSideLen,
                              minWordLen, lex);
         }
