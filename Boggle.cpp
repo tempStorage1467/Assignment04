@@ -424,7 +424,7 @@ int main() {
                 highlightCube(outPath[i].rowNum, outPath[i].colNum, true);
             }
             recordWordForPlayer(nextWord, HUMAN);
-            pause(1000);
+            pause(750);
             for (int i = 0; i < outPath.size(); i++) {
                 highlightCube(outPath[i].rowNum, outPath[i].colNum, false);
             }
@@ -433,15 +433,11 @@ int main() {
     }
 
     /***** Task 4: Find all words on the board (computer's turn) *****/
-    cout << "Computer's Turn" << endl;
     Set<string> allWords = getAllWords(vecBoard, SIDE_LEN,
                                        MIN_WORD_LENGTH, dict);
     Set<string> remainingWords = allWords - enteredWords;
-    cout << "Found " << allWords.size() << " words!" << endl;
-    cout << allWords << endl;
-    foreach(string foundWord in allWords) {
+    foreach(string foundWord in remainingWords) {
         recordWordForPlayer(foundWord, COMPUTER);
     }
-    cout << "End" << endl;
     return 0;
 }
