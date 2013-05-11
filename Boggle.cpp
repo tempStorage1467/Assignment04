@@ -316,7 +316,9 @@ void isWordFormedFrom(string soFar, const int colN, const int rowN,
                       Set<string>& foundWords, Vector<Vector<char> > board,
                       const int boardSideLen, const int minWordLen,
                       const Lexicon& lex) {
-   // cout << rowN << ", " << colN << " " << soFar << endl;
+    if (soFar == "RA" && rowN == 2 && colN == 0) {
+        cout << "here";
+    }
     const char EXAMINED_CUBE = '0';
     if (rowN < 0 || rowN >= boardSideLen || colN < 0 || colN >= boardSideLen) {
         // Base Case: attempting to explore a path off the board, fail ASAP
@@ -447,8 +449,8 @@ int main() {
                                        MIN_WORD_LENGTH, dict);
     Set<string> remainingWords = allWords - enteredWords;
     cout << "Found " << allWords.size() << " words!" << endl;
-    cout << remainingWords << endl;
-    foreach(string foundWord in remainingWords) {
+    cout << allWords << endl;
+    foreach(string foundWord in allWords) {
         recordWordForPlayer(foundWord, COMPUTER);
     }
     cout << "End" << endl;

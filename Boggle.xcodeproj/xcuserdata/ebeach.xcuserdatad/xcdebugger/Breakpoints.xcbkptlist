@@ -2,4 +2,19 @@
 <Bucket
    type = "1"
    version = "1.0">
+   <FileBreakpoints>
+      <FileBreakpoint
+         shouldBeEnabled = "Yes"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "Boggle.cpp"
+         timestampString = "389934914.494866"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "320"
+         endingLineNumber = "320"
+         landmarkName = "isWordFormedFrom(string soFar, const int colN, const int rowN, Set&lt;string&gt;&amp; foundWords, Vector&lt;Vector&lt;char&gt; &gt; board, const int boardSideLen, const int minWordLen, const Lexicon&amp; lex)"
+         landmarkType = "7">
+      </FileBreakpoint>
+   </FileBreakpoints>
 </Bucket>
