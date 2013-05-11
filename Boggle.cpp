@@ -1,4 +1,4 @@
-/*
+    /*
  * File: Boggle.cpp
  * ----------------
  * Name: [TODO: enter name here]
@@ -68,10 +68,13 @@ Vector<string> shuffleCubes(const string iCubes[], int numCubes) {
 }
 
 // exposedCubeFaces is an output parameter
+// vecBoard is an output parameter
 void processChars(Vector<string>& cubes, int rows, int cols,
-                  Set<char>& exposedCubeFaces) {
+                  Set<char>& exposedCubeFaces,
+                  Vector<Vector<char> >& vecBoard) {
     int charPlaced = 0;
     for (int row = 0; row < rows; row++) {
+        Vector<char> colVec;
         for (int col = 0; col < cols; col++) {
             int cubeFace = randomInteger(0, cubes[charPlaced].size() - 1);
             // swap elements so that placed char is always at zero element
@@ -84,10 +87,15 @@ void processChars(Vector<string>& cubes, int rows, int cols,
             // store the exposed char into a set for use later in the program
             exposedCubeFaces.add(temp);
             
+            // store the exposed char into a 2-dimensional vector representing
+            //   the board for use later in the program
+            colVec.add(temp);
+            
             // place face-up char from cube onto board
             labelCube(row, col, temp);
             charPlaced++;
         }
+        vecBoard.add(colVec);
     }
 }
 
@@ -210,6 +218,7 @@ string getNextHumanWord(Set<string>& enteredWords,
     while (promptAgain) {
         input = getLine("Enter the string: ");
         input = toUpperCase(input);
+        if (input == "") break;
         if (enteredWords.contains(input)) {
             // check if user already entered this word, either as a guess (in
             //   which case we shouldn't waste time checking it again or as
@@ -258,7 +267,7 @@ bool isWordPresentFrom(const string& word, Vector<Coordinate>& outputPath,
         //   the recursive backtracking
         return false;
     }
-    
+
     // mark a char taken in this path board[] to repeat duplicate usage
     board[rowN][colN] = EXAMINED_CUBE;
     for (int col = -1; col <= 1; col++) {
@@ -279,20 +288,8 @@ bool isWordPresentFrom(const string& word, Vector<Coordinate>& outputPath,
 }
 
 bool isWordPresent(const string& word, Vector<Coordinate>& outputPath,
-                   const Vector<string>& cubes, const int boardSideLen) {
-    // create a two dimensional vector of chars with letters on board
-    //   as it will be much easier to navigate this than a vector
-    int i = 0;
-    Vector<Vector<char> > board;
-    for (int col = 0; col < boardSideLen; col++) {
-        Vector<char> colVec;
-        for (int row = 0; row < boardSideLen; row++) {
-            colVec.add(cubes[i][0]);
-            i++;
-        }
-        board.add(colVec);
-    }
-
+                   const Vector<Vector<char> > & board,
+                   const int boardSideLen) {
     for (int col = 0; col < boardSideLen; col++) {
         for (int row = 0; row < boardSideLen; row++) {
             if (isWordPresentFrom(word, outputPath, col, row,
@@ -314,9 +311,60 @@ bool quickWordPresenceCheck(const string& word, const int maxWordLen,
     return true;
 }
 
+/***** Task 4: Find all words on the board (computer's turn) *****/
+void isWordFormedFrom(string soFar, const int colN, const int rowN,
+                      Set<string>& foundWords, Vector<Vector<char> > board,
+                      const int boardSideLen, const int minWordLen,
+                      const Lexicon& lex) {
+   // cout << rowN << ", " << colN << " " << soFar << endl;
+    const char EXAMINED_CUBE = '0';
+    if (rowN < 0 || rowN >= boardSideLen || colN < 0 || colN >= boardSideLen) {
+        // Base Case: attempting to explore a path off the board, fail ASAP
+        return;
+    } else if (board[rowN][colN] == EXAMINED_CUBE) {
+        // Base Case: already explored this cube in the same tree-path of
+        //   the recursive backtracking
+        return;
+    } else if (!lex.containsPrefix(soFar)) {
+        // Base Case: no possibility of finding a valid word in this branch
+        return;
+    } else if (soFar.size() >= minWordLen && lex.contains(soFar)) {
+        foundWords.add(soFar);
+    }
+    
+    // add to the explored string path
+    soFar += board[rowN][colN];
+    // mark a char taken in this path board[] to repeat duplicate usage
+    board[rowN][colN] = EXAMINED_CUBE;
+    for (int col = -1; col <= 1; col++) {
+        for (int row = -1; row <= 1; row++) {
+            isWordFormedFrom(soFar, rowN + row, colN + col,
+                             foundWords, board, boardSideLen,
+                             minWordLen, lex);
+        }
+    }
+}
+
+Set<string> getAllWords(Vector<Vector<char> >& vecBoard,
+                        const int boardSideLen,
+                        const int minWordLen,
+                        Lexicon& lex) {
+    Set<string> result;
+    string seed = "";
+    for (int col = 0; col < boardSideLen; col++) {
+        for (int row = 0; row < boardSideLen; row++) {
+            Set<string> found;
+            isWordFormedFrom(seed, col, row, found,
+                             vecBoard, boardSideLen,
+                             minWordLen, lex);
+            result += found;
+        }
+    }
+    return result;
+}
+
 int main() {
     /***** Task 1: Cube Setup, Board Drawing, and Cube Shaking *****/
-    
     GWindow gw(BOGGLE_WINDOW_WIDTH, BOGGLE_WINDOW_HEIGHT);
     initGBoggle(gw);
     welcome();
@@ -349,7 +397,8 @@ int main() {
     }
 
     Set<char> exposedCubeFaces;
-    processChars(cubes, SIDE_LEN, SIDE_LEN, exposedCubeFaces);
+    Vector<Vector<char> > vecBoard;
+    processChars(cubes, SIDE_LEN, SIDE_LEN, exposedCubeFaces, vecBoard);
     
     /***** Task 2: Human's Turn (except for finding words on the board) *****/
     Set<string> enteredWords;
@@ -360,10 +409,11 @@ int main() {
     cout << "you can! Signal that you're finished by entering an empty line.";
     cout << endl << endl;
     
-    string nextWord = " ";
+    string nextWord;
     Vector<Coordinate> outPath;
-    while (nextWord != "") {
+    while (true) {
         nextWord = getNextHumanWord(enteredWords, dict, MIN_WORD_LENGTH);
+        if (nextWord == "") break;
         // record that a given word has been guessed so it cannot be guessed
         //   again, regardless of whether it is valid (save duplicate work)
         enteredWords.add(nextWord);
@@ -375,13 +425,14 @@ int main() {
         // short-circut evaluation ensures we only incur expensive recursive
         //   computation if absolutely necessary
         if (!quickWordPresenceCheck(nextWord, SIDE_LEN, exposedCubeFaces) ||
-            !isWordPresent(nextWord, outPath, cubes, SIDE_LEN)) {
+            !isWordPresent(nextWord, outPath, vecBoard, SIDE_LEN)) {
             cout << "You can't make that word!" << endl;
             continue;
         } else {
             for (int i = 0; i < outPath.size(); i++) {
                 highlightCube(outPath[i].rowNum, outPath[i].colNum, true);
             }
+            recordWordForPlayer(nextWord, HUMAN);
             pause(1000);
             for (int i = 0; i < outPath.size(); i++) {
                 highlightCube(outPath[i].rowNum, outPath[i].colNum, false);
@@ -390,5 +441,16 @@ int main() {
         outPath.clear();
     }
 
+    /***** Task 4: Find all words on the board (computer's turn) *****/
+    cout << "Computer's Turn" << endl;
+    Set<string> allWords = getAllWords(vecBoard, SIDE_LEN,
+                                       MIN_WORD_LENGTH, dict);
+    Set<string> remainingWords = allWords - enteredWords;
+    cout << "Found " << allWords.size() << " words!" << endl;
+    cout << remainingWords << endl;
+    foreach(string foundWord in remainingWords) {
+        recordWordForPlayer(foundWord, COMPUTER);
+    }
+    cout << "End" << endl;
     return 0;
 }
