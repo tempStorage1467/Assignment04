@@ -18,15 +18,7 @@
 #include "set.h"
 using namespace std;
 
-/*
-At the heart of the program are two recursive functions that
-find words on the board, one for the human player and another for the computer
- 
- these two recursive functions need to be different... don't overlap them
- */
-
 ////////// CONSTANTS //////////
-
 const int BOGGLE_WINDOW_WIDTH = 650;
 const int BOGGLE_WINDOW_HEIGHT = 350;
 
@@ -316,20 +308,19 @@ void isWordFormedFrom(string soFar, const int colN, const int rowN,
                       Set<string>& foundWords, Vector<Vector<char> > board,
                       const int boardSideLen, const int minWordLen,
                       const Lexicon& lex) {
-
     const char EXAMINED_CUBE = '0';
     if (rowN < 0 || rowN >= boardSideLen || colN < 0 || colN >= boardSideLen) {
         // Base Case: attempting to explore a path off the board, fail ASAP
-        return;
-    } else if (board[rowN][colN] == EXAMINED_CUBE) {
-        // Base Case: already explored this cube in the same tree-path of
-        //   the recursive backtracking
         return;
     } else if (!lex.containsPrefix(soFar)) {
         // Base Case: no possibility of finding a valid word in this branch
         return;
     } else if (soFar.size() >= minWordLen && lex.contains(soFar)) {
         foundWords.add(soFar);
+    } else if (board[rowN][colN] == EXAMINED_CUBE) {
+        // Base Case: already explored this cube in the same tree-path of
+        //   the recursive backtracking
+        return;
     }
 
     // add to the explored string path
@@ -368,13 +359,13 @@ int main() {
     GWindow gw(BOGGLE_WINDOW_WIDTH, BOGGLE_WINDOW_HEIGHT);
     initGBoggle(gw);
     welcome();
-    bool needInstructions = false;//askBoolQuestion("", "Do you need instructions? ");
+    bool needInstructions = askBoolQuestion("", "Do you need instructions? ");
     if (needInstructions) {
         giveInstructions();
     }
-    bool bigBoggie = false;//askBoolQuestion("You can choose standard Boggle (4x4 grid)"
-                           //          " or Big Boggle (5x5).",
-                           //          "Would you like Big Boogle? ");
+    bool bigBoggie = askBoolQuestion("You can choose standard Boggle (4x4 grid)"
+                                     " or Big Boggle (5x5).",
+                                     "Would you like Big Boogle? ");
     int bWidth;
     if (bigBoggie) {
         bWidth = 5;
@@ -384,9 +375,9 @@ int main() {
     const int SIDE_LEN = bWidth;
     drawBoard(SIDE_LEN, SIDE_LEN);
 
-    bool forceBoardConfig = true;//askBoolQuestion("",
-                                 //               "Do you want to force the board"
-                                 //               " configuration? ");
+    bool forceBoardConfig = askBoolQuestion("",
+                                            "Do you want to force the board"
+                                            " configuration? ");
 
     Vector<string> cubes;
     if (forceBoardConfig) {
