@@ -1,4 +1,4 @@
-    /*
+/*
  * File: Boggle.cpp
  * ----------------
  * Name: Eric Beach
@@ -175,7 +175,7 @@ bool askBoolQuestion(string preface, string question) {
     }
     string input;
     while (input != "Y" && input != "YES" &&
-           input != "Y" && input != "NO") {
+           input != "N" && input != "NO") {
         input = getLine(question);
         strToUpperCase(input);
     }
@@ -380,7 +380,7 @@ bool quickWordPresenceCheck(const string& word, const int maxWordLen,
  *   from the adjoining locations where $soFar has the current cube's char
  *   added.
  */
-void isWordFormedFrom(string soFar, const int colN, const int rowN,
+void findWordsFrom(string soFar, const int colN, const int rowN,
                       Set<string>& foundWords, Vector<Vector<char> > board,
                       const int boardSideLen, const int minWordLen,
                       const Lexicon& lex) {
@@ -405,7 +405,7 @@ void isWordFormedFrom(string soFar, const int colN, const int rowN,
     board[rowN][colN] = EXAMINED_CUBE;
     for (int col = -1; col <= 1; col++) {
         for (int row = -1; row <= 1; row++) {
-            isWordFormedFrom(soFar, colN + col, rowN + row,
+            findWordsFrom(soFar, colN + col, rowN + row,
                              foundWords, board, boardSideLen,
                              minWordLen, lex);
         }
@@ -428,7 +428,7 @@ Set<string> getAllWords(Vector<Vector<char> >& vecBoard,
     for (int col = 0; col < boardSideLen; col++) {
         for (int row = 0; row < boardSideLen; row++) {
             Set<string> found;
-            isWordFormedFrom(seed, col, row, found,
+            findWordsFrom(seed, col, row, found,
                              vecBoard, boardSideLen,
                              minWordLen, lex);
             result += found;
@@ -437,31 +437,15 @@ Set<string> getAllWords(Vector<Vector<char> >& vecBoard,
     return result;
 }
 
-int main() {
-    /***** Task 1: Cube Setup, Board Drawing, and Cube Shaking *****/
-    GWindow gw(BOGGLE_WINDOW_WIDTH, BOGGLE_WINDOW_HEIGHT);
-    initGBoggle(gw);
-    welcome();
-    bool needInstructions = askBoolQuestion("", "Do you need instructions? ");
-    if (needInstructions) {
-        giveInstructions();
-    }
-    bool bigBoggie = askBoolQuestion("You can choose standard Boggle (4x4 grid)"
-                                     " or Big Boggle (5x5).",
-                                     "Would you like Big Boogle? ");
-    int bWidth;
-    if (bigBoggie) {
-        bWidth = 5;
-    } else {
-        bWidth = 4;
-    }
-    const int SIDE_LEN = bWidth;
+/***** Task 5: Loop to play many games, add polish *****/
+/*
+ * Play the Boggle game. This allows the end-user to look
+ */
+void playBoggle(const int SIDE_LEN) {
     drawBoard(SIDE_LEN, SIDE_LEN);
-
     bool forceBoardConfig = askBoolQuestion("",
                                             "Do you want to force the board"
                                             " configuration? ");
-
     Vector<string> cubes;
     if (forceBoardConfig) {
         cubes = getManualCubes(SIDE_LEN);
@@ -469,7 +453,7 @@ int main() {
         cubes = shuffleCubes(STANDARD_CUBES,
                              SIDE_LEN * SIDE_LEN);
     }
-
+    
     // a set containing all the chars that are facing up on the board.
     //   this is used to perform quick checking of user guesses.
     Set<char> exposedCubeFaces;
@@ -502,11 +486,8 @@ int main() {
         //   quit immmediately. also check for impossibly long words
         // short-circut evaluation ensures we only incur expensive recursive
         //   computation if absolutely necessary
-        if (!quickWordPresenceCheck(nextWord, SIDE_LEN, exposedCubeFaces) ||
-            !isWordPresent(nextWord, outPath, vecBoard, SIDE_LEN)) {
-            cout << "You can't make that word!" << endl;
-            continue;
-        } else {
+        if (quickWordPresenceCheck(nextWord, SIDE_LEN, exposedCubeFaces) &&
+            isWordPresent(nextWord, outPath, vecBoard, SIDE_LEN)) {
             // guessed word could be found; highlight it on the board and then
             //   remove the highlighting
             for (int i = 0; i < outPath.size(); i++) {
@@ -517,10 +498,12 @@ int main() {
             for (int i = 0; i < outPath.size(); i++) {
                 highlightCube(outPath[i].rowNum, outPath[i].colNum, false);
             }
-            outPath.clear();
+        } else {
+            cout << "You can't make that word!" << endl;
         }
+        outPath.clear();
     }
-
+    
     /***** Task 4: Find all words on the board (computer's turn) *****/
     // find all possible words on the board
     Set<string> allWords = getAllWords(vecBoard, SIDE_LEN,
@@ -530,6 +513,36 @@ int main() {
     // print each word onto the screen that the computer found
     foreach(string foundWord in remainingWords) {
         recordWordForPlayer(foundWord, COMPUTER);
+    }
+}
+int main() {
+    /***** Task 1: Cube Setup, Board Drawing, and Cube Shaking *****/
+    GWindow gw(BOGGLE_WINDOW_WIDTH, BOGGLE_WINDOW_HEIGHT);
+    initGBoggle(gw);
+    welcome();
+    bool needInstructions = askBoolQuestion("", "Do you need instructions? ");
+    if (needInstructions) {
+        giveInstructions();
+    }
+    bool bigBoggie = askBoolQuestion("You can choose standard Boggle (4x4 grid)"
+                                     " or Big Boggle (5x5).",
+                                     "Would you like Big Boogle? ");
+    int bWidth;
+    if (bigBoggie) {
+        bWidth = 5;
+    } else {
+        bWidth = 4;
+    }
+    const int SIDE_LEN = bWidth;
+    
+    bool playAgain = true;
+    while (playAgain) {
+        // in theory, as per the documentation for drawBoard() I should
+        //   not need to make this call to clear, but drawBoard() did not
+        //   produce the results of clearing, so I manually called it here.
+        gw.clear();
+        playBoggle(SIDE_LEN);
+        playAgain = askBoolQuestion("", "Would you like to play again? ");
     }
     return 0;
 }
